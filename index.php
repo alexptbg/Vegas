@@ -1,10 +1,12 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <?php
-$wlan = shell_exec("scripts/wlan.sh");
-if (empty($wlan)) { $wlan = "::1"; }
-$eth = shell_exec("scripts/eth.sh");
-if (empty($eth)) { $eth = "::1"; }
+$wlan = shell_exec("/var/www/html/vegas/scripts/wlan.sh");
+if (empty($wlan)) { $wlan = "::1"; } else { $wlan = preg_replace('/\s+/','',$wlan); }
+$eth = shell_exec("/var/www/html/vegas/scripts/eth.sh");
+if (empty($eth)) { $eth = "::1"; } else { $eth = preg_replace('/\s+/','',$eth); }
+$serial = shell_exec("cat /proc/cpuinfo | grep Serial | cut -d ' ' -f 2");
+if ($serial) { $sr = $serial; } else { $sr = "0"; }
 //options
 $dir = "./slider/";
 $shuffle = "true";
@@ -63,7 +65,7 @@ if(!empty($dir_contents)) {
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>VEGAS SLIDESHOW</title>
+  <title>VEGAS SLIDESHOW r3</title>
   <!-- Favicon -->
   <link rel="icon" href="ico/f32x32.png" sizes="32x32" type="image/png" />
   <link rel="icon" href="ico/f48x48.png" sizes="48x48" type="image/png" />
@@ -97,6 +99,8 @@ if(!empty($dir_contents)) {
         <button id="close" type="button"><i class="fa fa-times" aria-hidden="true"></i></button>
         <p>WLAN address:&nbsp;<?php echo $wlan; ?></p>
         <p>ETH address:&nbsp;<?php echo $eth; ?></p>
+        <p>Serial NR:&nbsp;<?php echo $sr; ?></p>
+        <p>CPU Temp:&nbsp;<span id="cpu"></span>&nbsp;&#8451;</p>
         <p>Videos:&nbsp;<?php echo $v; ?></p>
         <p>Images:&nbsp;<?php echo $i; ?></p>
       </div>
@@ -140,6 +144,9 @@ if(!empty($dir_contents)) {
     }
     slider();
     $(function() {
+      $("body").click(function(event) {
+        console.log("clicked: "+event.target.nodeName);
+      });
       $('body').mouseover(function(){
         $(this).css({cursor: 'none'});
       });
@@ -271,10 +278,11 @@ if(!empty($dir_contents)) {
         function one() { },
         function two() { },
         function three() { 
-          console.log("do something here later");
+          $(".info").show();
         }
       ];
       $('canvas').data('counter',0).click(function(x) {
+		  x.preventDefault();
         //console.log(x.target);
         var counter = $(this).data('counter');
         touchs[counter]();
@@ -286,6 +294,56 @@ if(!empty($dir_contents)) {
         }
         */
       });
+      //new revision 3
+      //cpu
+      $.ajax({
+        url: "scripts/cpu.php",
+        dataType: "json",
+        type: "GET",
+        contentType: "application/json",
+        success: function(cpu,textStatus,jQxhr){
+          console.log(cpu);
+          var cpuTemp = parseFloat(cpu);
+          $("#cpu").text(cpuTemp.toFixed(1));
+          if (cpuTemp > 76) {
+		    $('#cpu').css({ "color": "#FF0000" });
+		  } else if (cpuTemp > 62 && cpuTemp < 77) {
+		    $('#cpu').css({ "color": "#ff9900" });
+		  } else {
+		    $('#cpu').css({ "color": "#A7F700" });
+		  }
+        },
+        error: function(jqXhr,textStatus,errorThrown){
+          console.log(errorThrown);
+        },
+        timeout: 3000
+      });
+      //repeats
+      setInterval(function(){
+        //cpu
+        $.ajax({
+          url: "scripts/cpu.php",
+          dataType: "json",
+          type: "GET",
+          contentType: "application/json",
+          success: function(cpu,textStatus,jQxhr){
+            console.log(cpu);
+            var cpuTemp = parseFloat(cpu);
+            $("#cpu").text(cpuTemp.toFixed(1));
+            if (cpuTemp > 76) {
+		      $('#cpu').css({ "color": "#FF0000" });
+		    } else if (cpuTemp > 62 && cpuTemp < 77) {
+		      $('#cpu').css({ "color": "#ff9900" });
+		    } else {
+		      $('#cpu').css({ "color": "#A7F700" });
+		    }
+          },
+          error: function(jqXhr,textStatus,errorThrown){
+            console.log(errorThrown);
+          },
+          timeout: 3000
+        });
+      },15000);
     });
     </script>
 </body>

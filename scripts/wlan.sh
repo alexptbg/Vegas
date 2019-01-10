@@ -1,1 +1,2 @@
-/sbin/ifconfig wlan0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'
+#!/bin/bash
+/sbin/ifconfig wlan0 | grep 'inet '| awk '{print $2}'
